@@ -1,0 +1,24 @@
+尝试读取Excel文件: c:\Wpf\excelConvert\common\excel\xls\test.xlsx
+Excel文件包含 2 个工作表
+
+工作表名称: 道具配置表
+工作表维度: 10 行 x 5 列
+第一行第一个单元格的值: convert(test.txt,ItemDataConf.pb,ItemDataConf)
+前几行数据:
+convert(test.txt,ItemDataConf.pb,ItemDataConf)	空	空	空	空	
+ID	Name	Description	Value	Type	
+1	A	No	1	0	
+2	B	No	2	0	
+3	C	No	3	0	
+
+工作表名称: 技能配置表
+工作表维度: 10 行 x 3 列
+第一行第一个单元格的值: convert(test.txt,SkillDataConf.pb,SkillDataConf)
+前几行数据:
+convert(test.txt,SkillDataConf.pb,SkillDataConf)	空	空	
+SkillID	SkillName	BaseXP	
+1001	skill1	100	
+1002	skill2	200	
+1003	skill3	300	
+
+Excel文件读取测试完成

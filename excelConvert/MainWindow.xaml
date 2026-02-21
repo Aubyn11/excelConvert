@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:excelConvert"
         xmlns:viewModels="clr-namespace:excelConvert.ViewModels"
         mc:Ignorable="d"
-        Title="配置转换器" Height="500" Width="800"
+        Title="配置转换器" Height="800" Width="800" MinHeight="700" MinWidth="800"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip">
     <Window.Resources>
@@ -29,18 +29,28 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <ToolBar Grid.Row="0">
-            <Button Content="打开Excel文件" Command="{Binding OpenExcelFileCommand}" Style="{StaticResource PrimaryButton}">
-                <Button.ToolTip>
-                    <ToolTip Content="选择Excel文件并自动预览数据"/>
-                </Button.ToolTip>
-            </Button>
-            <Button Content="导出配置" Command="{Binding ExportConfigCommand}" Style="{StaticResource PrimaryButton}">
-                <Button.ToolTip>
-                    <ToolTip Content="将配置导出为.pb文件"/>
-                </Button.ToolTip>
-            </Button>
-        </ToolBar>
+        <!-- Excel文件和Sheet树形结构 -->
+        <Border Grid.Row="0" Style="{StaticResource ContentBorder}" Margin="15,5,15,5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Excel文件" Style="{StaticResource TitleText}" Margin="15,10,0,0"/>
+                <TreeView Grid.Row="1" ItemsSource="{Binding ExcelFileTree}" Margin="10" Height="200" SelectedItemChanged="TreeView_SelectedItemChanged" MouseDoubleClick="TreeView_MouseDoubleClick">
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Sheets}">
+                            <TextBlock Text="{Binding Name}" Cursor="Hand"/>
+                            <HierarchicalDataTemplate.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" Cursor="Hand"/>
+                                </DataTemplate>
+                            </HierarchicalDataTemplate.ItemTemplate>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </Grid>
+        </Border>
         
         <!-- 状态显示区域 -->
         <Border Grid.Row="1" Style="{StaticResource StatusPanel}">
@@ -54,6 +64,7 @@
             </Grid>
         </Border>
         
+        <!-- 数据预览区域 -->
         <Grid Grid.Row="2" Margin="15">
             <Border Style="{StaticResource ContentBorder}">
                 <Grid>
@@ -62,7 +73,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     
-                    <TextBlock Text="数据预览" Style="{StaticResource TitleText}" Margin="15,15,0,0"/>
+                    <TextBlock Text="数据预览" Style="{StaticResource TitleText}" Margin="15,20,0,0"/>
                     <TextBlock Text="Excel文件数据将在此处显示" Style="{StaticResource StatusText}" Grid.Row="0"/>
                     
                     <ScrollViewer Grid.Row="1" Style="{StaticResource CustomScrollViewer}" Margin="0,5,0,10">
@@ -84,7 +95,7 @@
         </Grid>
         
         <Grid Grid.Row="3" Margin="15,5,15,10">
-            <TextBlock Text="© 2024 Excel配置转换器" Style="{StaticResource StatusText}" HorizontalAlignment="Center"/>
+            <TextBlock Text="© 2026 Excel配置转换器" Style="{StaticResource StatusText}" HorizontalAlignment="Center"/>
         </Grid>
     </Grid>
 </Window>

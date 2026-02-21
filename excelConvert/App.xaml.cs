@@ -104,7 +104,7 @@ namespace excelConvert
                     foreach (string configFile in configFiles)
                     {
                         string fileName = Path.GetFileName(configFile);
-                        bool success = configService.LoadConfig(fileName, out var config);
+                        bool success = configService.LoadConfig(fileName, string.Empty, out var config);
                         
                         if (!success)
                         {
