@@ -1,7 +1,7 @@
 using excelConvert.Models;
 using excelConvert.Services;
 using excelConvert.ViewModels.Commands;
-using Microsoft.Win32;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -177,12 +177,12 @@ namespace excelConvert.ViewModels
             // 设置Excel文件目录
             string currentDir = Directory.GetCurrentDirectory();
             
-            // 方式1：从当前工作目录向上查找
-            string path1 = Path.Combine(currentDir, "..", "common", "excel", "xls");
+            // 方式1：从应用程序目录向上7级到项目根目录
+            string path1 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "..", "..", "common", "excel", "xls");
             path1 = Path.GetFullPath(path1);
             
-            // 方式2：从应用程序目录向上查找（少一级）
-            string path2 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "common", "excel", "xls");
+            // 方式2：从当前工作目录向上查找
+            string path2 = Path.Combine(currentDir, "..", "common", "excel", "xls");
             path2 = Path.GetFullPath(path2);
             
             // 方式3：直接使用绝对路径（基于用户提供的目录结构）
@@ -472,42 +472,44 @@ namespace excelConvert.ViewModels
                 // 使用配置信息中的导出文件名，如果没有则使用默认文件名
                 string defaultFileName = hasConfigInfo && !string.IsNullOrEmpty(exportFileName) ? exportFileName : $"{Path.GetFileNameWithoutExtension(sheetItem.ParentFile.Name)}_{sheetItem.Name}";
                 
-                SaveFileDialog saveFileDialog = new SaveFileDialog
-                {
-                    Filter = "PB文件 (*.pb)|*.pb",
-                    Title = "导出配置文件",
-                    DefaultExt = "pb",
-                    FileName = defaultFileName
-                };
+                // 计算 Assets/Cfg 目录路径（从exe向上7级到项目根目录，再进入Assets/Cfg）
+                string cfgDirectory = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "..", "..", "Assets", "Cfg"));
                 
-                if (saveFileDialog.ShowDialog() == true)
+                // 如果目录不存在则创建
+                if (!Directory.Exists(cfgDirectory))
                 {
-                    string filePath = saveFileDialog.FileName;
+                    Directory.CreateDirectory(cfgDirectory);
+                }
+                
+                // 避免重复添加.pb后缀
+                string cleanFileName = defaultFileName.EndsWith(".pb", StringComparison.OrdinalIgnoreCase)
+                    ? defaultFileName
+                    : $"{defaultFileName}.pb";
+                string filePath = Path.Combine(cfgDirectory, cleanFileName);
+                
+                try
+                {
+                    // 根据数据类型选择导出内容
+                    object exportData = null;
+                    if (ConfigBasedExcelData != null && ConfigBasedExcelData.Count > 0)
+                    {
+                        exportData = ConfigBasedExcelData;
+                    }
+                    else if (ExcelData != null && ExcelData.Count > 0)
+                    {
+                        exportData = ExcelData;
+                    }
                     
-                    try
-                    {
-                        // 根据数据类型选择导出内容
-                        object exportData = null;
-                        if (ConfigBasedExcelData != null && ConfigBasedExcelData.Count > 0)
-                        {
-                            exportData = ConfigBasedExcelData;
-                        }
-                        else if (ExcelData != null && ExcelData.Count > 0)
-                        {
-                            exportData = ExcelData;
-                        }
-                        
-                        // 使用策略模式处理导出
-                        var exportStrategy = Services.ExportStrategyFactory.CreateStrategy("pb");
-                        exportStrategy.Export(exportData, filePath);
-                        
-                        StatusMessage = $"配置文件已成功导出到: {filePath}";
-                    }
-                    catch (Exception ex)
-                    {
-                        Services.ExceptionHandler.HandleException(ex, "导出配置文件时发生错误");
-                        StatusMessage = "导出配置文件失败，请查看详细信息";
-                    }
+                    // 使用策略模式处理导出
+                    var exportStrategy = Services.ExportStrategyFactory.CreateStrategy("pb");
+                    exportStrategy.Export(exportData, filePath);
+                    
+                    StatusMessage = $"配置文件已成功导出到: {filePath}";
+                }
+                catch (Exception ex)
+                {
+                    Services.ExceptionHandler.HandleException(ex, "导出配置文件时发生错误");
+                    StatusMessage = "导出配置文件失败，请查看详细信息";
                 }
             }
             catch (Exception ex)
