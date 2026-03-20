@@ -14,7 +14,7 @@ namespace excelConvert.Services
         public ConfigService()
         {
             // 设置配置文件目录为common/cfg（位于项目根目录）
-            _configDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "..", "..", "common", "cfg");
+            _configDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "common", "cfg");
         }
         
         public bool LoadConfig(string configFileName, string dataScheme, out Config config)

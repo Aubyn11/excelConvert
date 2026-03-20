@@ -177,8 +177,8 @@ namespace excelConvert.ViewModels
             // 设置Excel文件目录
             string currentDir = Directory.GetCurrentDirectory();
             
-            // 方式1：从应用程序目录向上7级到项目根目录
-            string path1 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "..", "..", "common", "excel", "xls");
+            // 方式1：从应用程序目录向上4级到项目根目录
+            string path1 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "common", "excel", "xls");
             path1 = Path.GetFullPath(path1);
             
             // 方式2：从当前工作目录向上查找
@@ -472,8 +472,8 @@ namespace excelConvert.ViewModels
                 // 使用配置信息中的导出文件名，如果没有则使用默认文件名
                 string defaultFileName = hasConfigInfo && !string.IsNullOrEmpty(exportFileName) ? exportFileName : $"{Path.GetFileNameWithoutExtension(sheetItem.ParentFile.Name)}_{sheetItem.Name}";
                 
-                // 计算 Assets/Cfg 目录路径（从exe向上7级到项目根目录，再进入Assets/Cfg）
-                string cfgDirectory = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "..", "..", "Assets", "Cfg"));
+                // 计算 Assets/Cfg 目录路径（从exe向上4级到项目根目录，再进入Assets/Cfg）
+                string cfgDirectory = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Assets", "Cfg"));
                 
                 // 如果目录不存在则创建
                 if (!Directory.Exists(cfgDirectory))
