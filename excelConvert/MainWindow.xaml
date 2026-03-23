@@ -95,7 +95,18 @@
         </Grid>
         
         <Grid Grid.Row="3" Margin="15,5,15,10">
-            <TextBlock Text="© 2026 Excel配置转换器" Style="{StaticResource StatusText}" HorizontalAlignment="Center"/>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="1"
+                    Content="全部导出"
+                    Command="{Binding ExportAllCommand}"
+                    Style="{StaticResource PrimaryButton}"
+                    Width="120" Height="36"
+                    Margin="0,0,0,5"/>
+            <TextBlock Grid.Column="2" Text="© 2026 Excel配置转换器" Style="{StaticResource StatusText}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
         </Grid>
     </Grid>
 </Window>

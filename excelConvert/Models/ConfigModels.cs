@@ -26,5 +26,6 @@ namespace excelConvert.Models
         public string ExcelColumn { get; set; }
         public bool Required { get; set; }
         public string Type { get; set; }
+        public bool IsRepeated { get; set; }
     }
 }

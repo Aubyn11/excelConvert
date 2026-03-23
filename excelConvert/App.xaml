@@ -1,8 +1,7 @@
 ﻿<Application x:Class="excelConvert.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:excelConvert"
-             StartupUri="MainWindow.xaml">
+             xmlns:local="clr-namespace:excelConvert">
     <Application.Resources>
          
     </Application.Resources>

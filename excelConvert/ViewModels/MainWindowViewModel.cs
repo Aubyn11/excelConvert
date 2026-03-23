@@ -153,6 +153,7 @@ namespace excelConvert.ViewModels
                 {
                     // 通知所有命令状态变化
                     ((RelayCommand)ExportConfigCommand).RaiseCanExecuteChanged();
+                    ((RelayCommand)ExportAllCommand).RaiseCanExecuteChanged();
                 }
             }
         }
@@ -161,6 +162,11 @@ namespace excelConvert.ViewModels
         /// 导出配置命令
         /// </summary>
         public ICommand ExportConfigCommand { get; }
+        
+        /// <summary>
+        /// 全部导出命令
+        /// </summary>
+        public ICommand ExportAllCommand { get; }
         
         /// <summary>
         /// 构造函数
@@ -178,7 +184,7 @@ namespace excelConvert.ViewModels
             string currentDir = Directory.GetCurrentDirectory();
             
             // 方式1：从应用程序目录向上4级到项目根目录
-            string path1 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "common", "excel", "xls");
+string path1 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "common", "excel", "xls");
             path1 = Path.GetFullPath(path1);
             
             // 方式2：从当前工作目录向上查找
@@ -208,6 +214,7 @@ namespace excelConvert.ViewModels
             }
             
             ExportConfigCommand = new RelayCommand(ExportConfig, CanExecuteCommand);
+            ExportAllCommand = new RelayCommand(ExportAll, CanExecuteCommand);
             StatusMessage = "准备就绪";
             PreviewData = new List<string>();
             IsBusy = false;
@@ -493,7 +500,70 @@ namespace excelConvert.ViewModels
                     object exportData = null;
                     if (ConfigBasedExcelData != null && ConfigBasedExcelData.Count > 0)
                     {
-                        exportData = ConfigBasedExcelData;
+                        // 获取配置，用于判断哪些字段是 repeated 类型
+                        Config config = null;
+                        string configFileName2, exportFileName2, dataScheme2;
+                        bool hasConfig2 = _excelService.GetConfigInfoFromSheet(sheetItem.ParentFile.Path, sheetItem.Name, out configFileName2, out exportFileName2, out dataScheme2);
+                        if (!hasConfig2)
+                        {
+                            configFileName2 = _excelService.GetConfigFileName(_excelService.GetExcelFileName(sheetItem.ParentFile.Path));
+                            dataScheme2 = string.Empty;
+                        }
+                        _configService.LoadConfig(configFileName2, dataScheme2, out config);
+                        
+                        // 构建 repeated 字段集合（key: dataTypeName, value: repeated字段名集合）
+                        var repeatedFields = new Dictionary<string, HashSet<string>>();
+                        if (config?.Sheet1?.DataTypes != null)
+                        {
+                            foreach (var dt in config.Sheet1.DataTypes)
+                            {
+                                var set = new HashSet<string>();
+                                foreach (var f in dt.Fields)
+                                {
+                                    if (f.IsRepeated) set.Add(f.ExportName);
+                                }
+                                repeatedFields[dt.Name] = set;
+                            }
+                        }
+                        
+                        // 将 repeated 字段的字符串值转换为数组
+                        var convertedData = new Dictionary<string, List<Dictionary<string, object>>>();
+                        foreach (var kvp in ConfigBasedExcelData)
+                        {
+                            string typeName = kvp.Key;
+                            repeatedFields.TryGetValue(typeName, out HashSet<string> rFields);
+                            
+                            var convertedList = new List<Dictionary<string, object>>();
+                            foreach (var row in kvp.Value)
+                            {
+                                var convertedRow = new Dictionary<string, object>();
+                                foreach (var field in row)
+                                {
+                                    if (rFields != null && rFields.Contains(field.Key))
+                                    {
+                                        // repeated 字段：将逗号分隔的字符串转为 int 数组
+                                        var arrValues = new List<int>();
+                                        if (!string.IsNullOrWhiteSpace(field.Value))
+                                        {
+                                            foreach (var part in field.Value.Split(','))
+                                            {
+                                                string trimmed = part.Trim();
+                                                if (int.TryParse(trimmed, out int intVal))
+                                                    arrValues.Add(intVal);
+                                            }
+                                        }
+                                        convertedRow[field.Key] = arrValues;
+                                    }
+                                    else
+                                    {
+                                        convertedRow[field.Key] = field.Value;
+                                    }
+                                }
+                                convertedList.Add(convertedRow);
+                            }
+                            convertedData[typeName] = convertedList;
+                        }
+                        exportData = convertedData;
                     }
                     else if (ExcelData != null && ExcelData.Count > 0)
                     {
@@ -516,6 +586,116 @@ namespace excelConvert.ViewModels
             {
                 Services.ExceptionHandler.HandleException(ex, "导出配置文件时发生错误");
                 StatusMessage = "导出配置文件失败，请查看详细信息";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+        
+        /// <summary>
+        /// 全部导出：遍历所有 Excel 文件的所有 Sheet，依次导出
+        /// </summary>
+        private async void ExportAll(object parameter)
+        {
+            try
+            {
+                IsBusy = true;
+                int successCount = 0, failCount = 0;
+                StatusMessage = "正在全部导出...";
+                
+                string cfgDirectory = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Assets", "Cfg"));
+                if (!Directory.Exists(cfgDirectory))
+                    Directory.CreateDirectory(cfgDirectory);
+                
+                await Task.Run(() =>
+                {
+                    foreach (var fileItem in ExcelFileTree ?? new List<ExcelFileItem>())
+                    {
+                        foreach (var sheetItem in fileItem.Sheets)
+                        {
+                            try
+                            {
+                                // 获取 convert 配置
+                                string configFileName, exportFileName, dataScheme;
+                                bool hasConfigInfo = _excelService.GetConfigInfoFromSheet(fileItem.Path, sheetItem.Name, out configFileName, out exportFileName, out dataScheme);
+                                if (!hasConfigInfo || string.IsNullOrEmpty(exportFileName))
+                                    continue;
+                                
+                                // 加载配置
+                                if (!_configService.LoadConfig(configFileName, dataScheme, out Config config))
+                                    continue;
+                                
+                                // 读取 Excel 数据
+                                if (!_excelService.OpenExcelFileWithConfig(fileItem.Path, sheetItem.Name, config, out Dictionary<string, List<Dictionary<string, string>>> configData, out string configError))
+                                    continue;
+                                
+                                // 构建 repeated 字段集合
+                                var repeatedFields = new Dictionary<string, HashSet<string>>();
+                                if (config?.Sheet1?.DataTypes != null)
+                                {
+                                    foreach (var dt in config.Sheet1.DataTypes)
+                                    {
+                                        var set = new HashSet<string>();
+                                        foreach (var f in dt.Fields)
+                                            if (f.IsRepeated) set.Add(f.ExportName);
+                                        repeatedFields[dt.Name] = set;
+                                    }
+                                }
+                                
+                                // 转换 repeated 字段
+                                var convertedData = new Dictionary<string, List<Dictionary<string, object>>>();
+                                foreach (var kvp in configData)
+                                {
+                                    string typeName = kvp.Key;
+                                    repeatedFields.TryGetValue(typeName, out HashSet<string> rFields);
+                                    var convertedList = new List<Dictionary<string, object>>();
+                                    foreach (var row in kvp.Value)
+                                    {
+                                        var convertedRow = new Dictionary<string, object>();
+                                        foreach (var field in row)
+                                        {
+                                            if (rFields != null && rFields.Contains(field.Key))
+                                            {
+                                                var arrValues = new List<int>();
+                                                if (!string.IsNullOrWhiteSpace(field.Value))
+                                                    foreach (var part in field.Value.Split(','))
+                                                        if (int.TryParse(part.Trim(), out int iv)) arrValues.Add(iv);
+                                                convertedRow[field.Key] = arrValues;
+                                            }
+                                            else
+                                            {
+                                                convertedRow[field.Key] = field.Value;
+                                            }
+                                        }
+                                        convertedList.Add(convertedRow);
+                                    }
+                                    convertedData[typeName] = convertedList;
+                                }
+                                
+                                // 写入文件
+                                string cleanFileName = exportFileName.EndsWith(".pb", StringComparison.OrdinalIgnoreCase)
+                                    ? exportFileName : $"{exportFileName}.pb";
+                                string filePath = Path.Combine(cfgDirectory, cleanFileName);
+                                var exportStrategy = Services.ExportStrategyFactory.CreateStrategy("pb");
+                                exportStrategy.Export(convertedData, filePath);
+                                successCount++;
+                            }
+                            catch (Exception ex)
+                            {
+                                Services.ExceptionHandler.HandleException(ex, $"导出 {sheetItem.Name} 时发生错误");
+                                failCount++;
+                            }
+                        }
+                    }
+                });
+                
+                StatusMessage = $"全部导出完成：成功 {successCount} 个，失败 {failCount} 个";
+            }
+            catch (Exception ex)
+            {
+                Services.ExceptionHandler.HandleException(ex, "全部导出时发生错误");
+                StatusMessage = "全部导出失败，请查看详细信息";
             }
             finally
             {

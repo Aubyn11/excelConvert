@@ -107,12 +107,27 @@ namespace excelConvert.Services
                             {
                                 string fieldDefinition = parts[0].Trim();
                                 string[] fieldParts = fieldDefinition.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                                if (fieldParts.Length >= 2)
+                                
+                                // 支持 repeated 前缀：repeated int32 FieldName = N
+                                // 普通字段：int32 FieldName = N
+                                bool isRepeated = false;
+                                string fieldType = string.Empty;
+                                string fieldName = string.Empty;
+                                
+                                if (fieldParts.Length >= 3 && fieldParts[0].ToLower() == "repeated")
                                 {
-                                    // 提取字段类型和名称
-                                    string fieldType = fieldParts[0];
-                                    string fieldName = fieldParts[1];
-                                    
+                                    isRepeated = true;
+                                    fieldType = fieldParts[1];
+                                    fieldName = fieldParts[2];
+                                }
+                                else if (fieldParts.Length >= 2)
+                                {
+                                    fieldType = fieldParts[0];
+                                    fieldName = fieldParts[1];
+                                }
+                                
+                                if (!string.IsNullOrEmpty(fieldName))
+                                {
                                     // 检查是否是关键字段
                                     bool isKey = fieldDefinition.Contains("(key)");
                                     
@@ -121,7 +136,8 @@ namespace excelConvert.Services
                                         ExportName = fieldName,
                                         ExcelColumn = fieldName,
                                         Type = fieldType,
-                                        Required = isKey
+                                        Required = isKey,
+                                        IsRepeated = isRepeated
                                     });
                                 }
                             }
