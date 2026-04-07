@@ -107,7 +107,7 @@ foreach (var excelFile in Directory.GetFiles(excelDir, "*.xlsx"))
 
 Console.WriteLine();
 Console.WriteLine($"导出完成: 成功 {successCount} 个，失败 {failCount} 个");
-if (Environment.UserInteractive)
+if (Environment.UserInteractive && !Console.IsInputRedirected)
 {
     Console.WriteLine("按任意键退出...");
     Console.ReadKey();
